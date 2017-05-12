@@ -1,0 +1,95 @@
+WITH
+A AS (SELECT ID,AGE, HOSP_ID 
+FROM CD2005
+WHERE ACODE_ICD9_1 LIKE '460%' 
+		OR ACODE_ICD9_1 LIKE '461%'
+	     OR ACODE_ICD9_1 LIKE '462%' 
+		OR ACODE_ICD9_1 LIKE '463%'
+		OR ACODE_ICD9_1 LIKE '464%'
+		OR ACODE_ICD9_1 LIKE '465%'
+		OR ACODE_ICD9_1 LIKE '466%'
+		OR ACODE_ICD9_1 LIKE '480%'
+		OR ACODE_ICD9_1 LIKE '481%'
+		OR ACODE_ICD9_1 LIKE '482%'
+		OR ACODE_ICD9_1 LIKE '483%'
+		OR ACODE_ICD9_1 LIKE '484%'
+		OR ACODE_ICD9_1 LIKE '485%'
+		OR ACODE_ICD9_1 LIKE '486%'
+		OR ACODE_ICD9_1 LIKE '487%'),
+
+B AS (SELECT ID,AGE, 縣市_當年度格式
+FROM A LEFT JOIN  新HOSB資料庫.dbo.HOSB2010 AS H
+ON A.HOSP_ID = H.HOSP_ID
+),
+
+C AS (SELECT ID, AGE, 縣市_當年度格式, COUNT(ID) AS T
+FROM B
+GROUP BY ID ,AGE, 縣市_當年度格式),
+
+D AS (SELECT ID, AGE, 縣市_當年度格式, MAX(T) AS M
+FROM C
+GROUP BY ID ,AGE, 縣市_當年度格式)
+
+SELECT ID, AGE, 縣市_當年度格式
+FROM D
+
+
+-- 使用max 在平手的時候，會把兩筆資料都留下來
+
+-- 新增序號，留下為一的
+
+WITH
+A AS (SELECT ID,AGE, HOSP_ID,FUNC_DATE 
+FROM CD2005
+WHERE ACODE_ICD9_1 LIKE '460%' 
+		OR ACODE_ICD9_1 LIKE '461%'
+	     OR ACODE_ICD9_1 LIKE '462%' 
+		OR ACODE_ICD9_1 LIKE '463%'
+		OR ACODE_ICD9_1 LIKE '464%'
+		OR ACODE_ICD9_1 LIKE '465%'
+		OR ACODE_ICD9_1 LIKE '466%'
+		OR ACODE_ICD9_1 LIKE '480%'
+		OR ACODE_ICD9_1 LIKE '481%'
+		OR ACODE_ICD9_1 LIKE '482%'
+		OR ACODE_ICD9_1 LIKE '483%'
+		OR ACODE_ICD9_1 LIKE '484%'	
+		OR ACODE_ICD9_1 LIKE '485%'
+		OR ACODE_ICD9_1 LIKE '486%'
+		OR ACODE_ICD9_1 LIKE '487%'),
+
+B AS (SELECT ID,AGE, FUNC_DATE, 縣市_當年度格式
+FROM A LEFT JOIN  新HOSB資料庫.dbo.HOSB2010 AS H
+ON A.HOSP_ID = H.HOSP_ID
+),
+
+C AS (SELECT ID, AGE, 縣市_當年度格式, COUNT(ID) AS T, MAX(FUNC_DATE) AS DATES
+FROM B
+GROUP BY ID ,AGE, 縣市_當年度格式),
+
+D AS (SELECT *, row_number() over(partition by id order by T desc,DATES desc) as counts_rank
+	FROM C
+)
+
+SELECT ID, AGE, 縣市_當年度格式
+FROM D
+WHERE counts_rank LIKE 1
+
+
+-- -------------------------------- 
+
+FF AS( /* FF為計算每個ID在每個醫療層級院所的就醫次數,及在那個層級的最後一次就醫日期 */
+	SELECT ID,HOSP_CONT_TYPE,COUNT(ID) AS COUNTS,MAX(FUNC_DATE)AS DATES
+	FROM AA
+	GROUP BY ID,HOSP_CONT_TYPE
+),
+F AS( /* F為新增序號,次數越多為1,若次數一樣多則取就醫日期最大的為1 */
+  SELECT *,row_number() over(partition by id order by counts desc,DATES desc) as counts_rank
+  FROM FF
+),
+
+
+
+
+
+
+
